@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>쿠폰 등록 관리</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* ── 다크/라이트 테마 ── */
+[data-theme="dark"]{
+  --bg:#0d0f18;--sf:#161926;--sf2:#1e2235;--sf3:#252a40;
+  --bd:#282d45;--ac:#5b7cf6;--ac2:#8b5cf6;
+  --green:#10b981;--red:#ef4444;--yellow:#f59e0b;--orange:#f97316;
+  --txt:#e2e6f3;--txt2:#7c85ad;--txt3:#3e4466;
+  --shadow:rgba(0,0,0,.4);
+}
+[data-theme="light"]{
+  --bg:#f4f6fb;--sf:#ffffff;--sf2:#f0f2f9;--sf3:#e8eaf4;
+  --bd:#d0d5e8;--ac:#4a6ef0;--ac2:#7c3aed;
+  --green:#059669;--red:#dc2626;--yellow:#d97706;--orange:#ea580c;
+  --txt:#1e2340;--txt2:#5a6282;--txt3:#9ca3c4;
+  --shadow:rgba(0,0,0,.1);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--txt);font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;font-size:14px;transition:background .2s,color .2s;}
+
+/* Header */
+header{background:var(--sf);border-bottom:1px solid var(--bd);padding:11px 20px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:200;box-shadow:0 1px 8px var(--shadow);}
+.logo{width:32px;height:32px;background:linear-gradient(135deg,var(--ac),var(--ac2));border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;font-size:11px;flex-shrink:0;letter-spacing:-.5px;}
+header h1{font-size:14px;font-weight:700;}
+.hm{margin-left:auto;display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
+.pill{background:var(--sf2);border:1px solid var(--bd);border-radius:20px;padding:3px 10px;font-size:11px;display:flex;align-items:center;gap:4px;}
+.dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+
+/* 테마 토글 */
+.theme-btn{background:var(--sf2);border:1px solid var(--bd);border-radius:20px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--txt2);transition:all .15s;}
+.theme-btn:hover{border-color:var(--ac);color:var(--ac);}
+
+main{display:flex;min-height:calc(100vh - 54px);}
+.content{flex:1;padding:16px 20px;min-width:0;}
+
+/* Sidebar */
+.sidebar{width:350px;flex-shrink:0;background:var(--sf);border-left:1px solid var(--bd);padding:16px;overflow-y:auto;display:none;}
+.sidebar.open{display:block;}
+.sb-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.sb-top h2{font-size:13px;font-weight:700;}
+.sb-sec{margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--bd);}
+.sb-sec:last-child{border-bottom:none;margin-bottom:0;}
+.sb-lbl{font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+.tag-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px;}
+.tag{display:inline-flex;align-items:center;gap:3px;background:var(--sf2);border:1px solid var(--bd);border-radius:5px;padding:3px 8px;font-size:12px;}
+.tag-x{background:none;border:none;color:var(--txt3);cursor:pointer;font-size:13px;line-height:1;}
+.tag-x:hover{color:var(--red);}
+.tag-excl{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.2);color:var(--red);}
+.add-row{display:flex;gap:5px;}
+.si{background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:6px 9px;color:var(--txt);font-size:12px;outline:none;flex:1;min-width:0;}
+.si:focus{border-color:var(--ac);}
+.si::placeholder{color:var(--txt3);}
+.add-btn{background:var(--ac);color:#fff;border:none;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;}
+.add-btn:hover{background:#4a6ae0;}
+.note{font-size:11px;color:var(--txt3);margin-top:5px;line-height:1.5;}
+
+/* 요금표 */
+.rt{width:100%;border-collapse:collapse;font-size:11.5px;margin-bottom:7px;}
+.rt th{background:var(--sf3);padding:5px 7px;text-align:left;color:var(--txt2);border-bottom:1px solid var(--bd);}
+.rt td{padding:5px 7px;border-bottom:1px solid rgba(40,45,69,.3);}
+[data-theme="light"] .rt td{border-bottom:1px solid var(--bd);}
+.rt tr:last-child td{border-bottom:none;}
+.rt-amt{font-family:monospace;font-weight:700;color:var(--ac);}
+
+/* 직원 */
+.emp-list{max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;margin-bottom:7px;}
+.emp-item{display:flex;align-items:center;gap:5px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:5px 8px;font-size:11px;}
+.en{font-weight:700;width:50px;flex-shrink:0;}
+.et{color:var(--txt2);width:75px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ee{color:var(--txt3);font-family:monospace;font-size:10px;flex:1;overflow:hidden;text-overflow:ellipsis;}
+.edel{background:none;border:none;color:var(--txt3);cursor:pointer;font-size:12px;margin-left:auto;}
+.edel:hover{color:var(--red);}
+.emp-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;}
+
+/* Upload */
+.up-card{background:var(--sf);border:2px dashed var(--bd);border-radius:11px;padding:22px 16px;text-align:center;cursor:pointer;transition:all .2s;max-width:480px;margin:40px auto 0;}
+.up-card:hover,.up-card.over{border-color:var(--ac);background:rgba(91,124,246,.05);}
+.up-card.loaded{border-color:var(--green);border-style:solid;}
+.up-card input{display:none;}
+.uc-ico{font-size:30px;margin-bottom:7px;}
+.uc-ttl{font-size:14px;font-weight:700;margin-bottom:4px;}
+.uc-desc{font-size:12px;color:var(--txt2);}
+.uc-fn{font-size:11px;font-weight:600;margin-top:6px;}
+
+/* Cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:9px;margin-bottom:14px;}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:13px;}
+.card .lbl{font-size:10px;color:var(--txt2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}
+.card .val{font-size:20px;font-weight:800;}
+.card .sub{font-size:10px;color:var(--txt2);margin-top:2px;}
+.c-blue .val{color:var(--ac);}.c-yellow .val{color:var(--yellow);}.c-green .val{color:var(--green);}.c-red .val{color:var(--red);}.c-purple .val{color:#a78bfa;}
+
+/* Steps */
+.steps{display:flex;gap:5px;margin-bottom:13px;flex-wrap:wrap;}
+.step{display:flex;align-items:center;gap:4px;background:var(--sf);border:1px solid var(--bd);border-radius:7px;padding:5px 9px;font-size:11px;color:var(--txt2);}
+.step.done{border-color:var(--green);color:var(--green);}
+.step .snum{width:15px;height:15px;border-radius:50%;background:var(--sf2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
+.step.done .snum{background:var(--green);color:#fff;}
+
+/* Tabs */
+.tabs{display:flex;gap:2px;background:var(--sf);border:1px solid var(--bd);border-radius:9px;padding:3px;width:fit-content;margin-bottom:13px;}
+.tab{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;color:var(--txt2);border:none;background:none;transition:all .15s;}
+.tab.active{background:var(--ac);color:#fff;}
+
+/* Controls */
+.ctrl{display:flex;gap:6px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
+input.srch,select.sel{background:var(--sf);border:1px solid var(--bd);border-radius:7px;padding:6px 10px;color:var(--txt);font-size:12px;outline:none;}
+input.srch{flex:1;min-width:150px;}
+input.srch::placeholder{color:var(--txt3);}
+input.srch:focus,select.sel:focus{border-color:var(--ac);}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
+.btn-p{background:var(--ac);color:#fff;}.btn-p:hover{filter:brightness(1.1);}
+.btn-g{background:var(--green);color:#fff;}.btn-g:hover{filter:brightness(1.1);}
+.btn-ghost{background:var(--sf);border:1px solid var(--bd);color:var(--txt);}
+.btn-ghost:hover{border-color:var(--ac);color:var(--ac);}
+.btn-sm{padding:4px 9px;font-size:11px;}
+.btn-close{background:none;border:none;color:var(--txt2);cursor:pointer;font-size:15px;}
+
+/* Sel bar */
+.sel-bar{display:none;align-items:center;gap:7px;background:var(--sf2);border:1px solid var(--ac);border-radius:9px;padding:8px 12px;margin-bottom:10px;flex-wrap:wrap;}
+.sel-info{font-size:12px;color:var(--txt2);}
+.sel-info strong{color:var(--ac);font-weight:700;}
+
+/* Export group */
+.export-group{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+.export-group .eg-lbl{font-size:11px;color:var(--txt2);font-weight:600;}
+
+/* Table */
+.tw{background:var(--sf);border:1px solid var(--bd);border-radius:11px;overflow:hidden;}
+.th2{padding:10px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.th2 h3{font-size:12px;font-weight:700;}
+.cnt{background:var(--sf2);border:1px solid var(--bd);border-radius:9px;padding:2px 9px;font-size:11px;color:var(--ac);font-weight:700;}
+.ts{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{background:var(--sf2);padding:8px 9px;text-align:left;color:var(--txt2);font-size:10px;font-weight:700;white-space:nowrap;border-bottom:1px solid var(--bd);}
+td{padding:7px 9px;border-bottom:1px solid var(--bd);white-space:nowrap;}
+[data-theme="dark"] td{border-bottom:1px solid rgba(40,45,69,.5);}
+td.ec{cursor:pointer;}
+td.ec:hover{background:rgba(91,124,246,.12)!important;}
+td.ec:hover::after{content:' ✏';font-size:9px;color:var(--txt3);}
+tr:hover td{background:var(--sf2);}
+[data-theme="dark"] tr:hover td{background:rgba(91,124,246,.025);}
+tr.r-dup td{background:rgba(139,92,246,.04);}
+tr.r-miss td{background:rgba(239,68,68,.03);}
+tr.r-ok td{background:rgba(16,185,129,.02);}
+tr:last-child td{border-bottom:none;}
+input[type="checkbox"]{width:13px;height:13px;accent-color:var(--ac);cursor:pointer;}
+
+/* Badges */
+.badge{display:inline-block;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:700;}
+.b-blue{background:rgba(91,124,246,.15);color:var(--ac);}
+.b-green{background:rgba(16,185,129,.15);color:var(--green);}
+.b-gray{background:rgba(124,133,173,.1);color:var(--txt2);}
+.amount{font-family:monospace;font-weight:700;color:var(--ac);}
+.mc{display:inline-flex;align-items:center;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:700;margin:1px;}
+.mc-n{background:rgba(239,68,68,.15);color:var(--red);}
+.mc-s{background:rgba(245,158,11,.15);color:var(--yellow);}
+.mc-a{background:rgba(249,115,22,.15);color:var(--orange);}
+.mc-ok{background:rgba(16,185,129,.1);color:var(--green);}
+.mc-dup{background:rgba(139,92,246,.15);color:#a78bfa;}
+.mc-cno{background:rgba(239,68,68,.15);color:var(--red);font-family:monospace;}
+.legend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;font-size:11px;color:var(--txt2);}
+
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;align-items:center;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--sf);border:1px solid var(--bd);border-radius:13px;padding:20px;min-width:300px;max-width:420px;width:90%;}
+.modal h3{font-size:14px;font-weight:700;margin-bottom:14px;}
+.modal label{display:block;font-size:11px;color:var(--txt2);margin-bottom:4px;margin-top:10px;}
+.modal input{width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:7px;padding:7px 10px;color:var(--txt);font-size:12px;outline:none;}
+.modal input:focus{border-color:var(--ac);}
+.modal-btns{display:flex;gap:7px;margin-top:16px;justify-content:flex-end;}
+.modal-note{font-size:11px;color:var(--txt2);margin-top:8px;padding:7px;background:var(--sf2);border-radius:5px;line-height:1.5;}
+
+.empty{padding:50px;text-align:center;color:var(--txt2);}
+.empty .ei{font-size:38px;margin-bottom:10px;}
+#loading{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
+#loading.show{display:flex;}
+.spinner{width:32px;height:32px;border:3px solid var(--bd);border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#toast{position:fixed;bottom:16px;right:16px;background:var(--sf);border:1px solid var(--bd);border-radius:9px;padding:10px 14px;font-size:12px;box-shadow:0 8px 24px var(--shadow);opacity:0;transform:translateY(8px);transition:all .25s;z-index:999;max-width:300px;}
+#toast.show{opacity:1;transform:translateY(0);}
+#toast.ok{border-color:var(--green);}
+#toast.err{border-color:var(--red);}
+</style>
+</head>
+<body>
+<div id="loading"><div class="spinner"></div><span style="color:var(--txt2);font-size:12px" id="loadMsg">처리 중...</span></div>
+<div id="toast"></div>
+
+<!-- Edit Modal -->
+<div class="modal-bg" id="editModal">
+  <div class="modal">
+    <h3>✏️ 쿠폰 정보 수정</h3>
+    <label>고객명 <span style="color:var(--txt3)">(이름에 '쿠폰' 포함 여부)</span></label>
+    <input id="edt_name">
+    <label>사은품 <span style="color:var(--txt3)">(선납권 포함 여부)</span></label>
+    <input id="edt_sp">
+    <label>쿠폰금액</label>
+    <input id="edt_amt" type="number">
+    <div class="modal-note" id="editNote"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal()">취소</button>
+      <button class="btn btn-p" onclick="saveEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="logo">KT</div>
+  <h1>쿠폰 등록 관리</h1>
+  <div class="hm">
+    <div class="pill" id="hSrcP" style="display:none"><div class="dot" style="background:var(--ac)"></div><span id="hSrc">0</span>건</div>
+    <div class="pill" id="hCouponP" style="display:none"><div class="dot" style="background:var(--yellow)"></div>쿠폰 <span id="hCoupon">0</span>건</div>
+    <div class="pill" id="hPillDup" style="display:none"><div class="dot" style="background:var(--ac2)"></div>등록완료 <span id="hDup">0</span>건</div>
+    <div class="pill" id="hMissP" style="display:none"><div class="dot" style="background:var(--red)"></div>누락 <span id="hMiss">0</span>건</div>
+    <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙 다크</button>
+    <button class="btn btn-ghost btn-sm" id="btnReset" style="display:none" onclick="resetAll()">🔄 다시 선택</button>
+    <button class="btn btn-ghost btn-sm" onclick="toggleSidebar()">⚙️ 설정</button>
+  </div>
+</header>
+
+<main>
+<div class="content">
+
+  <!-- 업로드 -->
+  <div id="upSec">
+    <div style="margin-bottom:12px;text-align:center">
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px">📂 파일 업로드</div>
+      <div style="font-size:12px;color:var(--txt2)">원본 XLS 필수 / 이전 다우업로드 CSV를 함께 올리면 이미 등록된 건을 자동으로 표시합니다</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:640px;margin:0 auto 16px">
+      <div class="up-card" id="srcCard" style="margin:0" onclick="document.getElementById('srcFi').click()">
+        <div class="uc-ico">📋</div>
+        <div class="uc-ttl">원본 XLS <span style="color:var(--red);font-size:11px">필수</span></div>
+        <div class="uc-desc">전체고객상품_YYYYMM.xls</div>
+        <div class="uc-fn" id="srcName" style="color:var(--txt3);margin-top:6px">파일을 선택하세요</div>
+        <input type="file" id="srcFi" accept=".xls,.xlsx" onchange="onSrcSelect(this)">
+      </div>
+      <div class="up-card" id="csvCard" style="margin:0" onclick="document.getElementById('csvFi').click()">
+        <div class="uc-ico">📊</div>
+        <div class="uc-ttl">이전 다우업로드 CSV <span style="color:var(--txt3);font-size:11px">선택</span></div>
+        <div class="uc-desc">이전에 내보낸 다우업로드용.csv<br><span style="font-size:11px;color:var(--txt3)">올리면 이미 등록된 건 자동 감지</span></div>
+        <div class="uc-fn" id="csvName" style="color:var(--txt3);margin-top:6px">파일을 선택하세요</div>
+        <input type="file" id="csvFi" accept=".csv" onchange="onCsvSelect(this)">
+      </div>
+    </div>
+    <div style="text-align:center">
+      <button class="btn btn-p" id="startBtn" disabled onclick="startProcess()" style="padding:9px 28px;font-size:13px;opacity:.4">▶ 가공 시작</button>
+    </div>
+  </div>
+
+  <!-- 대시보드 -->
+  <div id="dash" style="display:none">
+    <div class="steps" id="stepBar"></div>
+    <div class="cards">
+      <div class="card c-blue"><div class="lbl">원본 전체</div><div class="val" id="cTotal">0</div></div>
+      <div class="card c-yellow"><div class="lbl">쿠폰 대상</div><div class="val" id="cCoupon">0</div><div class="sub">TV 상품</div></div>
+      <div class="card c-purple"><div class="lbl">이미 등록</div><div class="val" id="cDup">0</div></div>
+      <div class="card c-red"><div class="lbl">누락</div><div class="val" id="cMiss">0</div><div class="sub">수정 필요</div></div>
+      <div class="card c-green"><div class="lbl">신규 완성</div><div class="val" id="cNew">0</div><div class="sub">내보내기 가능</div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('coupon',this)">🎫 쿠폰 대상</button>
+      <button class="tab" onclick="switchTab('daou',this)">📤 다우업로드용</button>
+      <button class="tab" onclick="switchTab('tv',this)">📺 전산_TV</button>
+      <button class="tab" onclick="switchTab('inet',this)">🌐 전산_인터넷</button>
+      <button class="tab" onclick="switchTab('dup',this)">🔁 등록완료</button>
+    </div>
+
+    <!-- 쿠폰 탭 -->
+    <div id="tCoupon">
+      <div class="legend">
+        <b style="color:var(--txt)">상태:</b>
+        <span><span class="mc mc-dup">등록완료</span>이미등록</span>
+        <span><span class="mc mc-ok">✓완성</span>신규가능</span>
+        <span><span class="mc mc-n">이름</span><span class="mc mc-s">사은품</span><span class="mc mc-a">금액</span>누락항목</span>
+        <span style="color:var(--txt3)">· 고객명/사은품/쿠폰금액 셀 클릭 시 수정</span>
+      </div>
+      <div class="ctrl">
+        <input class="srch" id="srch" placeholder="고객명, 유치자 검색..." oninput="filterCoupon()">
+        <select class="sel" id="fTeam" onchange="filterCoupon()"><option value="">전체 협력점</option></select>
+        <select class="sel" id="fSt" onchange="filterCoupon()">
+          <option value="">전체</option>
+          <option value="new_ok">신규 완성</option>
+          <option value="miss">누락 있음</option>
+          <option value="dup">이미 등록</option>
+          <option value="cno_err">계약번호 오류</option>
+        </select>
+      </div>
+      <div class="sel-bar" id="selBar">
+        <span class="sel-info"><strong id="selN">0</strong>건 선택</span>
+        <button class="btn btn-ghost btn-sm" onclick="deselect()">✕ 해제</button>
+      </div>
+      <div class="export-group">
+        <span class="eg-lbl">신규 완성 전체:</span>
+        <button class="btn btn-g" onclick="exportAllDaouCSV()">📤 다우업로드 CSV</button>
+        <button class="btn btn-p" onclick="exportAllTvXlsx()">📺 전산_TV</button>
+        <button class="btn btn-p" onclick="exportAllInetXlsx()">🌐 전산_인터넷</button>
+        <button class="btn btn-ghost" onclick="exportAll3()">📦 3종 한번에</button>
+      </div>
+      <div class="tw">
+        <div class="th2">
+          <h3>쿠폰 등록 대상 (TV 상품)</h3>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="cnt" id="filtN">0건</span>
+            <button class="btn btn-p btn-sm" onclick="applyInetInputs()" style="padding:5px 11px;font-size:12px">✓ 적용</button>
+            <button class="btn btn-sm" onclick="deleteSelected()" style="padding:5px 11px;font-size:12px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:var(--red)">🗑 삭제</button>
+          </div>
+        </div>
+        <div class="ts">
+          <table>
+            <thead><tr>
+              <th><input type="checkbox" id="chkAll" onchange="toggleAll(this)"></th>
+              <th>No</th><th>고객명</th><th>변경후상품</th>
+              <th>인터넷계약번호</th><th>TV계약번호</th>
+              <th>개통일</th><th>협력점</th><th>유치자</th>
+              <th>사은품</th><th>쿠폰금액</th><th>월×개월</th>
+              <th>인터넷쿠폰 (금액 / 개월)</th><th>상태</th>
+            </tr></thead>
+            <tbody id="couponBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 다우업로드 탭 -->
+    <div id="tDaou" style="display:none">
+      <div class="ctrl">
+        <input class="srch" id="daouSrch" placeholder="고객명 검색..." oninput="filterDaou()">
+        <button class="btn btn-g" onclick="exportAllDaouCSV()">📤 CSV 내보내기</button>
+      </div>
+      <div class="tw">
+        <div class="th2"><h3>다우업로드용 CSV</h3><span class="cnt" id="daouN">0건</span></div>
+        <div class="ts">
+          <table>
+            <thead><tr>
+              <th>상태</th><th>구분</th><th>유치자이메일</th><th>유치부서</th><th>고객명</th>
+              <th>개통일자</th><th>인터넷계약번호</th><th>TV계약번호</th>
+              <th>기존인터넷</th><th>변경인터넷</th><th>월인터넷</th><th>인터넷개월</th><th>총인터넷</th>
+              <th>기존TV</th><th>변경TV</th><th>월TV</th><th>TV개월</th><th>총TV</th>
+              <th>월STB</th><th>STB개월</th><th>총STB</th>
+              <th>합계</th><th>쿠폰등록자</th><th>등록일</th>
+            </tr></thead>
+            <tbody id="daouBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 전산_TV 탭 -->
+    <div id="tTv" style="display:none">
+      <div class="ctrl">
+        <button class="btn btn-p" onclick="exportAllTvXlsx()">📺 전산_TV 엑셀 내보내기</button>
+      </div>
+      <div class="tw">
+        <div class="th2"><h3>전산용 TV쿠폰양식</h3><span class="cnt" id="tvN">0건</span></div>
+        <div class="ts">
+          <table>
+            <thead><tr>
+              <th>NO</th><th>TV 서비스계약번호</th><th>요금할인금액</th>
+              <th>STB요금할인금액</th><th>가전구독요금할인금액</th><th>할인시작 월</th><th>개월 수</th>
+            </tr></thead>
+            <tbody id="tvBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 전산_인터넷 탭 -->
+    <div id="tInet" style="display:none">
+      <div class="ctrl">
+        <button class="btn btn-p" onclick="exportAllInetXlsx()">🌐 전산_인터넷 엑셀 내보내기</button>
+      </div>
+      <div class="tw">
+        <div class="th2"><h3>전산용 인터넷쿠폰양식</h3><span class="cnt" id="inetN">0건</span></div>
+        <div class="ts">
+          <table>
+            <thead><tr>
+              <th>NO</th><th>인터넷 서비스계약번호</th><th>쿠폰권종</th>
+              <th>가전구독 쿠폰</th><th>할인시작 월</th><th>개월 수</th>
+            </tr></thead>
+            <tbody id="inetBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 등록완료 탭 -->
+    <div id="tDup" style="display:none">
+      <div class="tw">
+        <div class="th2"><h3>이미 등록된 고객 (이전 CSV 비교 결과)</h3><span class="cnt" id="dupN">0건</span></div>
+        <div class="ts">
+          <table>
+            <thead><tr>
+              <th>No</th><th>고객명</th><th>변경후상품</th><th>인터넷계약번호</th><th>TV계약번호</th>
+              <th>개통일</th><th>협력점</th><th>유치자</th><th>사은품</th><th>쿠폰금액</th>
+            </tr></thead>
+            <tbody id="dupBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:var(--txt2);padding:8px 12px;background:var(--sf2);border-radius:8px;border:1px solid var(--bd)">
+        💡 이전 다우업로드 CSV와 TV/인터넷 계약번호가 일치하는 건입니다. 이미 전산 등록되었을 가능성이 높습니다.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 사이드바 설정 -->
+<div class="sidebar" id="sidebar">
+  <div class="sb-top">
+    <h2>⚙️ 설정</h2>
+    <button class="btn-close" onclick="toggleSidebar()">✕</button>
+  </div>
+
+<!-- 메모 -->
+  <div class="sb-sec">
+    <div class="sb-lbl">📝 메모 / 참고사항</div>
+    <div style="font-size:11px;color:var(--txt3);margin-bottom:7px">쿠폰 등록 시 필요한 정보, 공지사항 등을 자유롭게 입력하세요</div>
+    <textarea id="memoText" placeholder="예) 다우업로드 마감일: 매월 25일&#10;TV 쿠폰 등록 시스템: xxx.kt.com&#10;담당자 연락처: 02-1234-5678" style="width:100%;min-height:160px;background:var(--sf2);border:1px solid var(--bd);border-radius:7px;padding:8px 10px;color:var(--txt);font-size:12px;resize:vertical;outline:none;line-height:1.6" oninput="saveMemo()"></textarea>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+      <span style="font-size:11px;color:var(--txt3)" id="memoSaved"></span>
+      <button class="btn btn-ghost btn-sm" onclick="clearMemo()">🗑 초기화</button>
+    </div>
+  </div>
+
+  <!-- TV 업셀 요금표 -->
+  <div class="sb-sec">
+    <div class="sb-lbl">📺 TV 업셀 쿠폰권종</div>
+    <div class="note" style="margin-bottom:7px">변경전→변경후 상품 / 월금액×개월=총액이 원본 쿠폰금액과 일치해야 함<br>다우업로드용 기존TV/변경TV 컬럼에 반영됩니다</div>
+    <table class="rt" id="tvRateTable">
+      <thead><tr><th>변경전(기존)</th><th>변경후</th><th>월금액</th><th>개월</th><th>총액</th><th></th></tr></thead>
+      <tbody id="tvRateBody"></tbody>
+    </table>
+    <div class="add-row" style="flex-wrap:wrap;gap:4px">
+      <input class="si" id="tvFrom" placeholder="변경전 (예:베이직)" style="min-width:80px">
+      <input class="si" id="tvTo" placeholder="변경후 (예:모든G)" style="min-width:80px">
+      <input class="si" id="tvMon" type="number" placeholder="월금액" style="width:70px;flex:none">
+      <input class="si" id="tvCnt" type="number" placeholder="개월" style="width:55px;flex:none">
+      <button class="add-btn" style="width:100%;margin-top:2px" onclick="addTvRate()">TV 요금 추가</button>
+    </div>
+  </div>
+
+  <!-- 인터넷 업셀 요금표 -->
+  <div class="sb-sec">
+    <div class="sb-lbl">🌐 인터넷 쿠폰권종</div>
+    <div class="note" style="margin-bottom:7px">인터넷 쿠폰은 기존/변경 상품 동일 / 다우업로드용 (월)인터넷 지원 요금 컬럼에 반영됩니다</div>
+    <table class="rt" id="inetRateTable">
+      <thead><tr><th>상품명</th><th>월금액</th><th>개월</th><th>총액</th><th></th></tr></thead>
+      <tbody id="inetRateBody"></tbody>
+    </table>
+    <div class="add-row" style="flex-wrap:wrap;gap:4px">
+      <input class="si" id="inetProd" placeholder="상품명 (예:인터넷)" style="min-width:100px">
+      <input class="si" id="inetMon" type="number" placeholder="월금액" style="width:70px;flex:none">
+      <input class="si" id="inetCnt" type="number" placeholder="개월" style="width:55px;flex:none">
+      <button class="add-btn" style="width:100%;margin-top:2px" onclick="addInetRate()">인터넷 요금 추가</button>
+    </div>
+  </div>
+
+  <!-- 제외 협력점 -->
+  <div class="sb-sec">
+    <div class="sb-lbl">🚫 제외 협력점 (자체 쿠폰등록팀)</div>
+    <div class="tag-row" id="exclTags"></div>
+    <div class="add-row">
+      <input class="si" id="newExcl" placeholder="협력점명" onkeydown="if(event.key==='Enter')addExcl()">
+      <button class="add-btn" onclick="addExcl()">추가</button>
+    </div>
+  </div>
+
+  <!-- 쿠폰 등록자 -->
+  <div class="sb-sec">
+    <div class="sb-lbl">🔑 쿠폰 등록자 (KOS ID)</div>
+    <div class="note" style="margin-bottom:7px">다우업로드용 CSV '쿠폰 등록자' 컬럼에 자동 입력됩니다</div>
+    <div class="add-row" style="margin-bottom:6px">
+      <input class="si" id="regId" placeholder="예: thdwlals@010king.com" onkeydown="if(event.key==='Enter')setRegistrar()">
+      <button class="add-btn" onclick="setRegistrar()">저장</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div id="regCurrent" style="font-size:12px;color:var(--green);font-family:monospace">(미설정)</div>
+      <button class="tag-x" onclick="clearRegistrar()" title="초기화" style="font-size:16px">×</button>
+    </div>
+  </div>
+
+  <!-- 직원 관리 -->
+  <div class="sb-sec">
+    <div class="sb-lbl">👥 직원 관리</div>
+    <div class="emp-list" id="empList"></div>
+    <div class="emp-grid">
+      <input class="si" id="eNm" placeholder="이름">
+      <input class="si" id="eTm" placeholder="팀명">
+    </div>
+    <input class="si" id="eEm" placeholder="이메일" style="width:100%;margin-bottom:5px">
+    <button class="add-btn" style="width:100%;margin-bottom:5px" onclick="addEmp()">직원 추가</button>
+    <div style="display:flex;gap:5px">
+      <button class="btn btn-ghost btn-sm" style="flex:1" onclick="exportEmpXlsx()">📥 내보내기</button>
+      <label style="flex:1">
+        <span class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;cursor:pointer">📂 불러오기</span>
+        <input type="file" style="display:none" accept=".xlsx,.xls" onchange="importEmpXlsx(this)">
+      </label>
+    </div>
+    <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:5px;color:var(--txt3)" onclick="resetAllSettings()">🔄 설정 전체 초기화 (localStorage 삭제)</button>
+  </div>
+</div>
+</main>
+
+<script>
+// ════════════════════════════════════════
+// Theme
+// ════════════════════════════════════════
+function toggleTheme(){
+  const html=document.documentElement;
+  const isDark=html.getAttribute('data-theme')==='dark';
+  html.setAttribute('data-theme',isDark?'light':'dark');
+  document.getElementById('themeBtn').textContent=isDark?'🌙 다크':'☀️ 라이트';
+  try{localStorage.setItem('kt_theme',isDark?'light':'dark');}catch(e){}
+}
+(function(){
+  try{
+    const t=localStorage.getItem('kt_theme');
+    if(t){
+      document.documentElement.setAttribute('data-theme',t);
+      document.addEventListener('DOMContentLoaded',()=>{
+        const btn=document.getElementById('themeBtn');
+        if(btn) btn.textContent=t==='light'?'🌙 다크':'☀️ 라이트';
+      });
+    }
+  }catch(e){}
+})();
+
+// ════════════════════════════════════════
+// Settings
+// ════════════════════════════════════════
+const SK='kt_coupon_v5';
+function loadCfg(){try{const s=localStorage.getItem(SK);if(s)return JSON.parse(s);}catch(e){}return null;}
+function saveCfg(){try{localStorage.setItem(SK,JSON.stringify(cfg));}catch(e){}}
+
+let cfg=loadCfg()||{
+  registrar:'',
+  memo:'',
+  excludeTeams:['5.상권사업부','우신기술사업부'],
+  // TV 요금표: {from, to, monthly, months}
+  tvRates:[
+    {from:'베이직',to:'모든G',monthly:5000,months:10},
+    {from:'베이직',to:'모든G',monthly:5500,months:9},
+    {from:'베이직',to:'모든G',monthly:5500,months:10},
+    {from:'베이직',to:'에센스',monthly:4000,months:10},
+    {from:'에센스',to:'모든G',monthly:1100,months:10},
+    {from:'에센스',to:'모든G',monthly:1100,months:9},
+    {from:'라이트',to:'모든G',monthly:4400,months:9},
+    {from:'베이직',to:'에센스',monthly:4400,months:10},
+  ],
+  // 인터넷 요금표: {prod, monthly, months}
+  inetRates:[
+    {prod:'인터넷',monthly:5500,months:9},
+    {prod:'인터넷',monthly:4400,months:9},
+    {prod:'인터넷',monthly:5000,months:10},
+  ],
+  employees:[
+    {name:'최시형',team:'시흥영업1팀',email:'leokekoa@010king.com'},
+    {name:'김시원',team:'시흥영업1팀',email:'coolxyz@010king.com'},
+    {name:'강병호',team:'시흥영업1팀',email:'kwindi18@010king.com'},
+    {name:'송유진',team:'시흥영업1팀',email:'thddbwls@010king.com'},
+    {name:'현보영',team:'시흥영업1팀',email:'gusqhdud@010king.com'},
+    {name:'박혜영',team:'시흥영업1팀',email:'qkrgpdud@010king.com'},
+    {name:'장영준',team:'시흥영업1팀',email:'wkddudwns0801@010king.com'},
+    {name:'신예지',team:'시흥영업2팀',email:'tlsdpwl@010king.com'},
+    {name:'양지애',team:'시흥영업2팀',email:'didwldo@010king.com'},
+    {name:'계동윤',team:'시흥영업2팀',email:'rpehddns@010king.com'},
+    {name:'임제엽',team:'시흥영업2팀',email:'dlawpduq@010king.com'},
+    {name:'황인영',team:'시흥영업2팀',email:'ddlsdudd@010king.com'},
+    {name:'성예훈',team:'시흥영업2팀',email:'tjddpgns@010king.com'},
+    {name:'이민철',team:'시흥영업2팀',email:'dlalscjf@010king.com'},
+    {name:'최성훈',team:'시흥영업2팀',email:'chltjdgns@010king.com'},
+    {name:'원주희',team:'시흥영업3팀',email:'dnjswngml@010king.com'},
+    {name:'권우빈',team:'시흥영업3팀',email:'kwb0729@010king.com'},
+    {name:'박수빈',team:'시흥영업3팀',email:'qkrtnqls@010king.com'},
+    {name:'박광윤',team:'시흥영업3팀',email:'bigisvip@010king.com'},
+    {name:'이상민',team:'시흥영업3팀',email:'dltkdals@010king.com'},
+    {name:'정승호',team:'시흥영업3팀',email:'wjdtmdgh@010king.com'},
+    {name:'노문희',team:'시흥영업3팀',email:'shansgml@010king.com'},
+    {name:'최서우',team:'시흥영업3팀',email:'chlduddms108@010king.com'},
+    {name:'박윤철',team:'외부협력1팀',email:'qkrdbscjf@010king.com'},
+    {name:'전하영',team:'외부협력1팀',email:'wjsgkdud@010king.com'},
+    {name:'이상민2',team:'외부협력1팀',email:'dltkdals2@010king.com'},
+    {name:'김지수',team:'영업기획팀',email:'rlawltn@010king.com'},
+    {name:'이지은',team:'영업기획팀',email:'dlwldms@010king.com'},
+    {name:'유주연',team:'영업기획팀',email:'dbwndus@010king.com'},
+    {name:'이정인',team:'영업기획팀',email:'dlwjddls@010king.com'},
+    {name:'노창훈',team:'천안영업팀',email:''},
+    {name:'홍혜리',team:'천안영업팀',email:''},
+    {name:'천준철',team:'상권사업부',email:''},
+  ]
+};
+
+function getEmpMap(){
+  const em={},tm={};
+  cfg.employees.forEach(e=>{em[e.name]=e.email;tm[e.name]=e.team;});
+  return{em,tm};
+}
+// 이름 정규화: 숫자/공백 제거 후 매칭 (이상민95 → 이상민)
+function lookupEmp(yuchi){
+  const{em,tm}=getEmpMap();
+  // 정확히 일치
+  if(em[yuchi]!==undefined) return{email:em[yuchi],team:tm[yuchi]||''};
+  // 숫자 제거 후 매칭 (예: 이상민95 → 이상민)
+  const normalized=yuchi.replace(/[0-9]/g,'').trim();
+  if(normalized&&em[normalized]!==undefined) return{email:em[normalized],team:tm[normalized]||''};
+  // 앞 2글자 매칭
+  const names=Object.keys(em);
+  const partial=names.find(n=>n.length>=2&&yuchi.startsWith(n));
+  if(partial) return{email:em[partial],team:tm[partial]||''};
+  return{email:'',team:''};
+}
+
+function renderCfg(){
+  // 쿠폰 등록자
+  // 메모
+  const memoEl=document.getElementById('memoText');
+  if(memoEl&&memoEl.value!==cfg.memo) memoEl.value=cfg.memo||'';
+  const memoSaved=document.getElementById('memoSaved');
+  if(memoSaved) memoSaved.textContent='';
+  // 쿠폰 등록자
+  const regCur=document.getElementById('regCurrent');
+  const regInput=document.getElementById('regId');
+  if(regCur) regCur.textContent=cfg.registrar?('현재: '+cfg.registrar):'(미설정)';
+  if(regInput) regInput.placeholder=cfg.registrar||'예: thdwlals@010king.com';
+  // TV 요금표
+  document.getElementById('tvRateBody').innerHTML=(cfg.tvRates||[]).map((r,i)=>'<tr><td>'+r.from+'</td><td>'+r.to+'</td>'+'<td class="rt-amt">'+r.monthly.toLocaleString()+'</td>'+'<td>'+r.months+'</td>'+'<td class="rt-amt">'+(r.monthly*r.months).toLocaleString()+'</td>'+'<td><button class="tag-x" onclick="removeTvRate('+i+')">\u00d7</button></td></tr>').join('');
+  // 인터넷 요금표
+  document.getElementById('inetRateBody').innerHTML=(cfg.inetRates||[]).map((r,i)=>'<tr><td>'+r.prod+'</td>'+'<td class="rt-amt">'+r.monthly.toLocaleString()+'</td>'+'<td>'+r.months+'</td>'+'<td class="rt-amt">'+(r.monthly*r.months).toLocaleString()+'</td>'+'<td><button class="tag-x" onclick="removeInetRate('+i+')">\u00d7</button></td></tr>').join('');
+  // 제외팀
+  document.getElementById('exclTags').innerHTML=cfg.excludeTeams.map((t,i)=>'<span class="tag tag-excl">'+t+'<button class="tag-x" onclick="removeExclIdx('+i+')">\u00d7</button></span>').join('');
+  // 직원
+  document.getElementById('empList').innerHTML=cfg.employees.map((e,i)=>'<div class="emp-item">'+'<span class="en">'+e.name+'</span>'+'<span class="et">'+e.team+'</span>'+'<span class="ee">'+(e.email||'—')+'</span>'+'<button class="edel" onclick="removeEmp('+i+')">\u00d7</button>'+'</div>').join('');
+}
+function setRegistrar(){const v=document.getElementById('regId').value.trim();if(!v){showToast('KOS ID 입력 필요','err');return;}cfg.registrar=v;saveCfg();renderCfg();document.getElementById('regId').value='';showToast('✅ 등록자 저장: '+v,'ok');}
+function clearRegistrar(){cfg.registrar='';saveCfg();renderCfg();}
+let memoTimer;
+function saveMemo(){
+  const v=document.getElementById('memoText').value;
+  cfg.memo=v;
+  clearTimeout(memoTimer);
+  memoTimer=setTimeout(()=>{
+    saveCfg();
+    const el=document.getElementById('memoSaved');
+    if(el){el.textContent='✓ 저장됨';setTimeout(()=>{el.textContent='';},2000);}
+  },600);
+}
+function clearMemo(){cfg.memo='';saveCfg();renderCfg();showToast('메모 초기화','ok');}
+function addTvRate(){
+  const from=document.getElementById('tvFrom').value.trim(),to=document.getElementById('tvTo').value.trim();
+  const mon=parseInt(document.getElementById('tvMon').value),cnt=parseInt(document.getElementById('tvCnt').value);
+  if(!from||!to||!mon||!cnt){showToast('모든 항목 입력 필요','err');return;}
+  if(!cfg.tvRates)cfg.tvRates=[];
+  cfg.tvRates.push({from,to,monthly:mon,months:cnt});
+  saveCfg();renderCfg();
+  ['tvFrom','tvTo','tvMon','tvCnt'].forEach(id=>document.getElementById(id).value='');
+}
+function removeTvRate(i){cfg.tvRates.splice(i,1);saveCfg();renderCfg();}
+function addInetRate(){
+  const prod=document.getElementById('inetProd').value.trim();
+  const mon=parseInt(document.getElementById('inetMon').value),cnt=parseInt(document.getElementById('inetCnt').value);
+  if(!prod||!mon||!cnt){showToast('모든 항목 입력 필요','err');return;}
+  if(!cfg.inetRates)cfg.inetRates=[];
+  cfg.inetRates.push({prod,monthly:mon,months:cnt});
+  saveCfg();renderCfg();
+  ['inetProd','inetMon','inetCnt'].forEach(id=>document.getElementById(id).value='');
+}
+function removeInetRate(i){cfg.inetRates.splice(i,1);saveCfg();renderCfg();}
+function addExcl(){const v=document.getElementById('newExcl').value.trim();if(!v)return;if(!cfg.excludeTeams.includes(v)){cfg.excludeTeams.push(v);saveCfg();renderCfg();}document.getElementById('newExcl').value='';if(allRows.length)reprocess();}
+function removeExcl(v){cfg.excludeTeams=cfg.excludeTeams.filter(t=>t!==v);saveCfg();renderCfg();if(allRows.length)reprocess();}
+function addEmp(){
+  const nm=document.getElementById('eNm').value.trim(),tm=document.getElementById('eTm').value.trim(),em=document.getElementById('eEm').value.trim();
+  if(!nm||!tm){showToast('이름/팀 필수','err');return;}
+  cfg.employees.push({name:nm,team:tm,email:em});saveCfg();renderCfg();
+  ['eNm','eTm','eEm'].forEach(id=>document.getElementById(id).value='');
+  showToast('✅ '+nm+' 추가','ok');
+}
+function removeEmp(i){cfg.employees.splice(i,1);saveCfg();renderCfg();}
+function exportEmpXlsx(){
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['이름','팀','이메일'],...cfg.employees.map(e=>[e.name,e.team,e.email||''])]),'직원목록');
+  XLSX.writeFile(wb,'직원목록.xlsx');
+}
+function importEmpXlsx(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const wb=XLSX.read(e.target.result,{type:'array'});
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+    // 기존 직원 전부 삭제 후 불러온 직원으로 교체
+    cfg.employees=[];
+    let n=0;
+    rows.slice(1).forEach(r=>{const[nm,tm,em]=r;if(nm&&tm){cfg.employees.push({name:String(nm),team:String(tm),email:String(em||'')});n++;}});
+    saveCfg();renderCfg();showToast('✅ 직원 목록 교체 완료: '+n+'명','ok');input.value='';
+  };reader.readAsArrayBuffer(file);
+}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');}
+function resetAllSettings(){
+  if(!confirm('모든 설정(직원목록, 요금표, 메모 등)을 초기화하고 새로고침 하시겠습니까?')) return;
+  try{localStorage.removeItem('kt_coupon_v5');localStorage.removeItem('kt_coupon_v4');localStorage.removeItem('kt_coupon_v3');localStorage.removeItem('kt_coupon_v2');}catch(e){}
+  location.reload();
+}
+
+// ════════════════════════════════════════
+// 파일 업로드
+// ════════════════════════════════════════
+let allRows=[],couponRows=[],daouRows=[],tvRows=[],inetRows=[];
+let filtCoupon=[],filtDaou=[];
+let alreadyTV=new Set(),alreadyInet=new Set();
+
+function onSrcSelect(input){
+  const file=input.files[0];if(!file)return;
+  document.getElementById('srcName').textContent=file.name;
+  document.getElementById('srcName').style.color='var(--green)';
+  document.getElementById('srcCard').classList.add('loaded');
+  const btn=document.getElementById('startBtn');
+  btn.disabled=false;btn.style.opacity='1';
+}
+function onCsvSelect(input){
+  const file=input.files[0];if(!file)return;
+  document.getElementById('csvName').textContent=file.name;
+  document.getElementById('csvName').style.color='var(--green)';
+  document.getElementById('csvCard').classList.add('loaded');
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  const card=document.getElementById('srcCard');
+  if(!card)return;
+  card.addEventListener('dragover',e=>{e.preventDefault();card.classList.add('over');});
+  card.addEventListener('dragleave',()=>card.classList.remove('over'));
+  card.addEventListener('drop',e=>{
+    e.preventDefault();card.classList.remove('over');
+    const file=e.dataTransfer.files[0];if(!file)return;
+    const dt=new DataTransfer();dt.items.add(file);
+    document.getElementById('srcFi').files=dt.files;
+    onSrcSelect(document.getElementById('srcFi'));
+  });
+  // CSV 카드 드래그앤드롭
+  const csvCard=document.getElementById('csvCard');
+  if(csvCard){
+    csvCard.addEventListener('dragover',e=>{e.preventDefault();csvCard.classList.add('over');});
+    csvCard.addEventListener('dragleave',()=>csvCard.classList.remove('over'));
+    csvCard.addEventListener('drop',e=>{
+      e.preventDefault();csvCard.classList.remove('over');
+      const file=e.dataTransfer.files[0];if(!file)return;
+      const dt=new DataTransfer();dt.items.add(file);
+      document.getElementById('csvFi').files=dt.files;
+      onCsvSelect(document.getElementById('csvFi'));
+    });
+  }
+});
+
+function startProcess(){
+  const srcFile=document.getElementById('srcFi').files[0];
+  const csvFile=document.getElementById('csvFi').files[0];
+  if(!srcFile){showToast('원본 XLS 파일을 선택해주세요','err');return;}
+  document.getElementById('loading').classList.add('show');
+
+  const readBuf=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsArrayBuffer(f);});
+  const readText=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsText(f,'utf-8');});
+
+  Promise.all([readBuf(srcFile), csvFile?readText(csvFile):Promise.resolve(null)])
+    .then(([srcBuf, csvText])=>{
+      try{
+        setLoadMsg('원본 XLS 파싱 중...');
+        parseSrc(srcBuf);
+        if(csvText){
+          setLoadMsg('이전 CSV 비교 중...');
+          parsePrevCsv(csvText);
+        }
+        setLoadMsg('쿠폰 대상 가공 중...');
+        reprocess();
+        document.getElementById('upSec').style.display='none';
+        document.getElementById('dash').style.display='block';
+        ['hSrcP','hCouponP','hMissP','btnReset'].forEach(id=>document.getElementById(id).style.display='');
+        const dupMsg=alreadyTV.size>0?` (이미등록 ${[...alreadyTV].length}건 감지)`:'';
+        showToast('✅ 완료 ('+couponRows.length+'건 쿠폰 대상)'+dupMsg,'ok');
+      }catch(err){showToast('❌ '+err.message,'err');console.error(err);}
+      document.getElementById('loading').classList.remove('show');
+    });
+}
+
+function resetAll(){
+  allRows=[];couponRows=[];daouRows=[];tvRows=[];inetRows=[];
+  alreadyTV.clear();alreadyInet.clear();
+  document.getElementById('dash').style.display='none';
+  document.getElementById('upSec').style.display='block';
+  ['hSrcP','hCouponP','hMissP','btnReset'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('srcFi').value='';
+  document.getElementById('srcCard').classList.remove('loaded');
+  document.getElementById('srcName').textContent='파일을 선택하세요';
+  document.getElementById('srcName').style.color='var(--txt3)';
+  document.getElementById('csvFi').value='';
+  document.getElementById('csvCard').classList.remove('loaded');
+  document.getElementById('csvName').textContent='파일을 선택하세요';
+  document.getElementById('csvName').style.color='var(--txt3)';
+  document.getElementById('startBtn').disabled=true;
+  document.getElementById('startBtn').style.opacity='.4';
+}
+function setLoadMsg(m){document.getElementById('loadMsg').textContent=m;}
+
+// ════════════════════════════════════════
+// 원본 XLS 파싱
+// ════════════════════════════════════════
+// 이전 다우업로드 CSV 파싱 → 이미 등록된 TV/인터넷 계약번호 추출
+function parsePrevCsv(text){
+  alreadyTV.clear();alreadyInet.clear();
+  // BOM 제거
+  const clean=text.replace(/^﻿/,'');
+  const lines=clean.split(/\r?\n/);
+  if(lines.length<2)return;
+  // 헤더에서 컬럼 인덱스 찾기
+  const parseRow=line=>{
+    const result=[];let cur='',inQ=false;
+    for(const ch of line){
+      if(ch==='"'){inQ=!inQ;}
+      else if(ch===','&&!inQ){result.push(cur.trim());cur='';}
+      else{cur+=ch;}
+    }
+    result.push(cur.trim());
+    return result;
+  };
+  const hdr=parseRow(lines[0]);
+  const tvIdx=hdr.findIndex(h=>h.includes('TV 서비스계약번호')||h==='TV 서비스계약번호');
+  const inetIdx=hdr.findIndex(h=>h.includes('인터넷 서비스계약번호')||h==='인터넷 서비스계약번호');
+  if(tvIdx<0&&inetIdx<0)return;
+  for(let i=1;i<lines.length;i++){
+    if(!lines[i].trim())continue;
+    const row=parseRow(lines[i]);
+    const tv=(row[tvIdx]||'').replace(/[^0-9]/g,'');
+    const inet=(row[inetIdx]||'').replace(/[^0-9]/g,'');
+    if(tv.length>=8)alreadyTV.add(tv);
+    if(inet.length>=8)alreadyInet.add(inet);
+  }
+}
+
+function parseSrc(buffer){
+  // euc-kr 시도, 실패하면 utf-8
+  let text='';
+  try{text=new TextDecoder('euc-kr').decode(buffer);}
+  catch(e){text=new TextDecoder('utf-8',{fatal:false}).decode(buffer);}
+  // HTML 형식 XLS인지 확인
+  const isHtml=text.trim().startsWith('<')||text.includes('<table')||text.includes('<TABLE');
+  let rows;
+  if(isHtml){
+    const doc=new DOMParser().parseFromString(text,'text/html');
+    rows=doc.querySelectorAll('tr');
+  } else {
+    // xlsx 바이너리 형식 시도 (XLSX 라이브러리 사용)
+    try{
+      const wb=XLSX.read(buffer,{type:'array',cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(aoa.length<2)throw new Error('원본 XLS 데이터 없음');
+      // aoa → allRows 직접 변환
+      const hdr=aoa[0].map(h=>String(h||'').trim());
+      const I2={};
+      const keys2=['No','고객명','상품명','상품옵션','정책구분','회선','셋트유형',
+        '가입.번호','할인탭','약정','개통상태','이미징처리','주소증빙','개통일','개통기한',
+        '협력점','유치자','접수일','사은품','사은품 지급처','현금','물류','쿠폰',
+        '지급예정','지급완료','상부점','주소','물류수령(주소)','주민번호',
+        '설치연락처','명의자 연락처','사은품은행','사은품계좌','사은품예금주','사은품주민번호',
+        '납부정보','은행(카드)사','계좌(카드)번호','예금(카드)주','예금(카드)주민번호',
+        '카드(유효기간)','납부(관계)','고객메모1','고객메모2','접수경로','고객인증','고객인증(값)',
+        '기타','고객이력','최초등록일','이메일','인입최초시간','취소요청일','토스자','소개자','대표자','유선동판 명의자'];
+      hdr.forEach((h,i)=>{if(keys2.includes(h))I2[h]=i;});
+      allRows=[];
+      for(let r=1;r<aoa.length;r++){
+        const row=aoa[r];
+        const obj={};
+        keys2.forEach(k=>{obj[k]=I2[k]!==undefined?String(row[I2[k]]??''):'';});
+        if(!obj['No']&&!obj['고객명'])continue;
+        allRows.push(obj);
+      }
+      return; // 바이너리 처리 완료
+    }catch(e2){throw new Error('원본 XLS 데이터 없음 (HTML/XLSX 형식 모두 실패): '+e2.message);}
+  }
+  if(rows.length<2)throw new Error('원본 XLS 데이터 없음');
+  const hdr=Array.from(rows[0].querySelectorAll('th,td')).map(c=>c.textContent.trim());
+  const I={};
+  const keys=['No','고객명','상품명','상품옵션','정책구분','회선','셋트유형',
+    '가입.번호','할인탭','약정','개통상태','이미징처리','주소증빙','개통일','개통기한',
+    '협력점','유치자','접수일','사은품','사은품 지급처','현금','물류','쿠폰',
+    '지급예정','지급완료','상부점','주소','물류수령(주소)','주민번호',
+    '설치연락처','명의자 연락처','사은품은행','사은품계좌','사은품예금주','사은품주민번호',
+    '납부정보','은행(카드)사','계좌(카드)번호','예금(카드)주','예금(카드)주민번호',
+    '카드(유효기간)','납부(관계)','고객메모1','고객메모2','접수경로','고객인증','고객인증(값)',
+    '기타','고객이력','최초등록일','이메일','인입최초시간','취소요청일','토스자','소개자','대표자','유선동판 명의자'];
+  hdr.forEach((h,i)=>{if(keys.includes(h))I[h]=i;});
+  const get=(cells,k)=>I[k]!==undefined?(cells[I[k]]?.textContent.trim()??''):'';
+  allRows=[];
+  for(let r=1;r<rows.length;r++){
+    const cells=rows[r].querySelectorAll('td,th');
+    if(cells.length<10)continue;
+    const obj={};keys.forEach(k=>obj[k]=get(cells,k));
+    if(!obj['No']&&!obj['고객명'])continue;
+    allRows.push(obj);
+  }
+}
+
+// ════════════════════════════════════════
+// 가공 로직
+// ════════════════════════════════════════
+function reprocess(){
+  const{em,tm}=getEmpMap();
+  couponRows=[];
+
+  // 인터넷행 계약번호 맵 미리 빌드
+  const inetMap={};
+  allRows.forEach(r=>{
+    if(!(r['상품명']||'').includes('인터넷'))return;
+    const name=(r['고객명']||'').trim();
+    const parts=(r['가입.번호']||'').split('/');
+    let inetNo='';
+    parts.forEach(p=>{const n=p.replace(/[^0-9]/g,'');if(n.length>=10&&!inetNo)inetNo=n;});
+    if(inetNo){
+      if(!inetMap[name])inetMap[name]=[];
+      inetMap[name].push(inetNo);
+    }
+  });
+
+  for(const r of allRows){
+    const prod=r['상품명']||'';
+    // TV 상품 또는 추가지급(민원및추가지급) 만 처리
+    const isTV=prod.includes('TV');
+    const isExtra=prod.includes('추가지급');
+    if(!isTV&&!isExtra)continue;
+    const 협력=r['협력점']||'';
+    if(cfg.excludeTeams.some(ex=>협력.includes(ex)))continue;
+    // 추단(추가단말) 제외 - TV 상품일 때만 적용
+    if(isTV&&(r['상품옵션']||'').includes('(추단)'))continue;
+
+    const c1=(r['고객명']||'').includes('쿠폰');
+    const c2=(r['사은품']||'').includes('선납권');
+    const c3=parseAmt(r['쿠폰'])>0;
+    if(!c1&&!c2&&!c3)continue;
+
+    // 삼쩜삼/와이즐리 실제 유치자
+    const yuchi=r['유치자']||'';
+    const is3=yuchi.includes('삼쩜삼')||협력.includes('삼쩜삼')||yuchi.includes('와이즐리')||협력.includes('와이즐리');
+    r._realYuchi=is3?((r['토스자']||'').trim()||(r['고객메모1']||'').trim()||yuchi):yuchi;
+    r._c1=c1;r._c2=c2;r._c3=c3;
+    r._couponAmt=extractCouponAmt(r);
+    if(r._uid===undefined) r._uid=r['No']+'_'+r['개통일'];
+    if(r._editName===undefined){r._editName=r['고객명'];r._editSp=r['사은품'];r._editAmt=r._couponAmt;}
+    if(r._inetCoupon===undefined){r._inetCoupon=false;r._inetAmt=0;r._inetMonths=0;}
+
+    // TV 계약번호: 가입.번호에서 11자리 숫자들
+    const joinParts=(r['가입.번호']||'').split('/');
+    let tvNo='',tvNo2='';
+    joinParts.forEach(p=>{
+      const n=p.replace(/[^0-9]/g,'');
+      if(n.length>=10){if(!tvNo)tvNo=n;else if(!tvNo2)tvNo2=n;}
+    });
+    const htNum=(r['할인탭']||'').replace(/[^0-9]/g,'');
+    if(htNum.length>=10&&!tvNo2)tvNo2=htNum;
+    r._tv=tvNo;r._tv2=tvNo2;
+    // 계약번호 유효성 체크 (11자리 숫자여야 함)
+    r._tvErr=tvNo.length!==11;   // TV 계약번호 오류
+    r._inetErr=false;            // 인터넷은 매칭 후 체크
+
+    // 인터넷 계약번호 매칭
+    const name=(r._editName||r['고객명']||'').trim();
+    let inetNos=inetMap[name]||[];
+    if(!inetNos.length){
+      const base=name.replace(/[^가-힣]/g,'').substring(0,2);
+      for(const[k,v]of Object.entries(inetMap)){
+        const kb=k.replace(/[^가-힣]/g,'').substring(0,2);
+        if(kb===base&&kb.length>=1){inetNos=v;break;}
+      }
+    }
+    r._inet=inetNos[0]||'';
+    r._inetErr=r._inet.length!==11&&r._inet.length!==0; // 비어있거나 11자리 아니면 오류 (비어있음은 별도표시)
+    r._inetEmpty=r._inet.length===0;
+
+    // 중복 체크
+    r._isDup=alreadyTV.size>0&&((tvNo&&alreadyTV.has(tvNo))||(tvNo2&&alreadyTV.has(tvNo2)));
+
+    couponRows.push(r);
+  }
+
+  // 편집값으로 재계산
+  couponRows.forEach(r=>{
+    r._c1=(r._editName||'').includes('쿠폰');
+    r._c2=(r._editSp||'').includes('선납권');
+    r._c3=parseFloat(r._editAmt)>0;
+    r._couponAmt=parseFloat(r._editAmt)||extractCouponAmt(r);
+  });
+
+  const complete=couponRows.filter(r=>!r._isDup&&r._c1&&r._c2&&r._c3);
+  daouRows=buildDaouRows(complete);
+  tvRows=buildTvRows(complete);
+  inetRows=buildInetRows();
+
+  updateStats();buildTeamFilter();
+  filtCoupon=[...couponRows];filtDaou=[...daouRows];
+  renderAll();
+}
+
+// ── 쿠폰금액 추출 ─────────────────────────────
+function extractCouponAmt(r){
+  const raw=parseAmt(r['쿠폰']);if(raw>0)return raw;
+  const s=r['사은품']||'';
+  let m=s.match(/TV쿠폰\s*([\d,]+)\s*[*×]\s*(\d+)/);if(m)return parseInt(m[1].replace(/,/g,''))*parseInt(m[2]);
+  m=s.match(/(\d{4,5})\s*[*×]\s*(\d+)/);if(m)return parseInt(m[1])*parseInt(m[2]);
+  m=s.match(/선납권[\s★]*([\d,\.]+)/);if(m)return parseFloat(m[1].replace(/,/g,'').replace(/\./g,''))||0;
+  return 0;
+}
+
+// ── TV 요금표 매칭 ────────────────────────────
+function getTvRate(r){
+  const s=r._editSp||r['사은품']||'';
+  const amt=r._couponAmt||0;
+  // 사은품에서 직접 파싱
+  let m=s.match(/(\d{4,5})\s*[*×]\s*(\d+)/);
+  if(m)return{from:'베이직',to:'모든G',monthly:parseInt(m[1]),months:parseInt(m[2])};
+  // TV 요금표에서 총액 매칭
+  const rates=cfg.tvRates||[];
+  const matched=rates.find(rate=>rate.monthly*rate.months===amt);
+  if(matched)return matched;
+  // 기본 추정
+  const guesses=[{m:5000,c:10},{m:5500,c:9},{m:5500,c:10},{m:4400,c:9},{m:4000,c:10},{m:1100,c:10},{m:1100,c:9}];
+  for(const g of guesses){if(g.m*g.c===amt)return{from:'베이직',to:'모든G',monthly:g.m,months:g.c};}
+  if(amt%5000===0&&amt/5000<=12)return{from:'베이직',to:'모든G',monthly:5000,months:amt/5000};
+  if(amt%5500===0&&amt/5500<=12)return{from:'베이직',to:'모든G',monthly:5500,months:amt/5500};
+  return{from:'베이직',to:'모든G',monthly:5000,months:10};
+}
+
+// ── 인터넷 요금표 매칭 ────────────────────────
+function getInetRate(amt){
+  const rates=cfg.inetRates||[];
+  const matched=rates.find(rate=>rate.monthly*rate.months===amt);
+  if(matched)return matched;
+  if(amt%5500===0&&amt/5500<=12)return{prod:'인터넷',monthly:5500,months:amt/5500};
+  if(amt%5000===0&&amt/5000<=12)return{prod:'인터넷',monthly:5000,months:amt/5000};
+  return{prod:'인터넷',monthly:5500,months:9};
+}
+
+// ── 할인시작월 YYYYMM ──────────────────────────
+function nextMonth(dateStr){
+  if(!dateStr)return '';
+  const d=new Date(dateStr);if(isNaN(d))return '';
+  d.setMonth(d.getMonth()+1);
+  const y=d.getFullYear(),mo=d.getMonth()+1;
+  return y*100+mo;
+}
+// YYYYMMDD → YYYY-MM-DD
+function fmtDate(dateStr){
+  if(!dateStr)return '';
+  if(String(dateStr).includes('-'))return String(dateStr).slice(0,10);
+  return String(dateStr).slice(0,10);
+}
+function todayFmt(){return new Date().toISOString().slice(0,10);} // 2026-07-01 형식
+
+// ── 다우업로드 CSV ────────────────────────────
+function buildDaouRows(rows){
+  const{em,tm}=getEmpMap();
+  return rows.map(r=>{
+    const yuchi=r._realYuchi||r['유치자']||'';
+    const{email:yuchiEmail,team:yuchiTeam}=lookupEmp(yuchi);
+    const tvRate=getTvRate(r);
+    // 인터넷 쿠폰: 사용자가 직접 체크+입력한 값만 반영
+    const inetAmt=(r._inetCoupon&&r._inetAmt>0)?r._inetAmt:0;
+    let inetMonthly=0,inetMonths=0,inetTotal=0;
+    if(inetAmt>0){
+      // 사용자가 직접 입력한 개월수 우선, 없으면 요금표에서 추정
+      const ir=getInetRate(inetAmt);
+      inetMonthly=ir.monthly;
+      inetMonths=(r._inetMonths>0)?r._inetMonths:ir.months;
+      inetTotal=inetMonthly*inetMonths;
+    }
+    return{
+      '상태':'쿠폰등록완료',
+      '구분':'업셀링',
+      '유치자(유발자)':yuchiEmail||'',
+      '유치부서(유발부서)':yuchiTeam||r['협력점']||'',
+      '고객명':r._editName||r['고객명'],
+      '개통일자':fmtDate(r['개통일']),
+      '인터넷 서비스계약번호':r._inet||'',
+      'TV 서비스계약번호':r._tv||'',
+      '기존 인터넷 상품':inetAmt>0?(getInetRate(inetAmt).prod||'인터넷'):'없음',
+      '변경 인터넷 상품':inetAmt>0?(getInetRate(inetAmt).prod||'인터넷'):'없음',
+      '(월)인터넷 지원 요금':inetMonthly,
+      '(총)인터넷 지원 개월수':inetMonths,
+      '(총)인터넷 지원 요금':inetTotal,
+      '기존 TV 상품':tvRate.from||'베이직',
+      '변경된 TV 상품':tvRate.to||'모든G',
+      '(월)TV 지원 요금':tvRate.monthly,
+      '(총)TV 지원 개월수':tvRate.months,
+      '(총)TV 지원 요금':tvRate.monthly*tvRate.months,
+      '(월)STB 지원요금':0,
+      '(총)STB 지원 개월수':0,
+      '(총)STB 지원 요금':0,
+      '총 합계(업셀링)':tvRate.monthly*tvRate.months+inetTotal,
+      '쿠폰 등록자 (KOS ID 기준)':cfg.registrar||'',
+      '쿠폰 전산 등록일':todayFmt(),
+      _src:r
+    };
+  });
+}
+
+// 같은 고객의 인터넷행 쿠폰금액 가져오기
+function getInetAmtForCustomer(tvRow){
+  const name=(tvRow._editName||tvRow['고객명']||'').trim();
+  const base=name.replace(/[^가-힣]/g,'').substring(0,2);
+  for(const r of allRows){
+    if(!(r['상품명']||'').includes('인터넷'))continue;
+    const rname=(r['고객명']||'').trim();
+    const rbase=rname.replace(/[^가-힣]/g,'').substring(0,2);
+    if(rname===name||rbase===base){
+      const amt=parseAmt(r['쿠폰']);
+      if(amt>0)return amt;
+    }
+  }
+  return 0;
+}
+
+// ── 전산_TV ───────────────────────────────────
+function buildTvRows(rows){
+  return rows.map(r=>{
+    const{monthly,months}=getTvRate(r);
+    return{
+      '서비스계약번호':r._tv||'',
+      '요금할인금액':monthly,
+      'STB요금할인금액':'',
+      '가전구독요금할인금액':'',
+      '할인시작 월':nextMonth(r['개통일']),
+      '개월 수':months,_src:r
+    };
+  });
+}
+
+// ── 전산_인터넷 ───────────────────────────────
+function buildInetRows(){
+  // 쿠폰 대상 중 인터넷쿠폰 체크된 것만
+  return couponRows.filter(r=>r._inetCoupon&&r._inetAmt>0).map(r=>{
+    const months=(r._inetMonths>0)?r._inetMonths:(getInetRate(r._inetAmt).months||'');
+    return{
+      '서비스계약번호':r._inet||'',
+      '쿠폰권종':r._inetAmt||'',
+      '가전구독 쿠폰':'',
+      '할인시작 월':nextMonth(r['개통일']),
+      '개월 수':months,_src:r
+    };
+  });
+}
+
+// ════════════════════════════════════════
+// Stats & UI
+// ════════════════════════════════════════
+function updateStats(){
+  const dup=couponRows.filter(r=>r._isDup).length;
+  const miss=couponRows.filter(r=>!r._isDup&&!(r._c1&&r._c2&&r._c3)).length;
+  const newOk=couponRows.filter(r=>!r._isDup&&r._c1&&r._c2&&r._c3).length;
+  document.getElementById('cTotal').textContent=allRows.length.toLocaleString();
+  document.getElementById('cCoupon').textContent=couponRows.length.toLocaleString();
+  document.getElementById('cDup').textContent=dup.toLocaleString();
+  document.getElementById('cMiss').textContent=miss.toLocaleString();
+  document.getElementById('cNew').textContent=newOk.toLocaleString();
+  document.getElementById('hSrc').textContent=allRows.length.toLocaleString();
+  document.getElementById('hCoupon').textContent=couponRows.length.toLocaleString();
+  document.getElementById('hMiss').textContent=miss.toLocaleString();
+  const steps=[
+    {label:'상품 필터링',done:allRows.length>0},
+    {label:'쿠폰 대상 추출',done:couponRows.length>0},
+    {label:'누락 확인',done:miss===0&&couponRows.length>0},
+    {label:'내보내기 준비',done:newOk>0},
+  ];
+  document.getElementById('stepBar').innerHTML=steps.map((s,i)=>
+    `<div class="step ${s.done?'done':''}"><div class="snum">${s.done?'✓':i+1}</div>${s.label}</div>`
+  ).join('');
+}
+function buildTeamFilter(){
+  const teams=[...new Set(couponRows.map(r=>r['협력점']).filter(Boolean))].sort();
+  const sel=document.getElementById('fTeam');
+  sel.innerHTML='<option value="">전체 협력점</option>';
+  teams.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;sel.appendChild(o);});
+}
+
+// ════════════════════════════════════════
+// 렌더링
+// ════════════════════════════════════════
+function renderAll(){renderCoupon();renderDaou();renderTv();renderInet();renderDup();}
+function renderDup(){
+  const dupRows=couponRows.filter(r=>r._isDup);
+  document.getElementById('dupN').textContent=dupRows.length+'건';
+  const tbody=document.getElementById('dupBody');
+  if(!dupRows.length){
+    tbody.innerHTML='<tr><td colspan="10"><div class="empty" style="padding:30px"><div class="ei">✅</div><p>중복 없음 - 이전 CSV 미업로드 시 비교 불가</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML=dupRows.map(r=>'<tr class="r-dup">'
+    +'<td>'+( r['No']||'')+'</td>'
+    +'<td>'+(r._editName||r['고객명'])+'</td>'
+    +'<td>'+(r['상품옵션']||'')+'</td>'
+    +'<td style="font-family:monospace;font-size:10px;color:var(--txt2)">'+(r._inet||'—')+'</td>'
+    +'<td style="font-family:monospace;font-size:10px;color:var(--txt2)">'+(r._tv||'—')+'</td>'
+    +'<td>'+(r['개통일']||'')+'</td>'
+    +'<td><span class="badge b-gray" style="font-size:10px">'+(r['협력점']||'')+'</span></td>'
+    +'<td style="font-size:11px">'+(r._realYuchi||r['유치자'])+'</td>'
+    +'<td style="max-width:130px;overflow:hidden;text-overflow:ellipsis" title="'+(r['사은품']||'')+'">'+(r['사은품']||'')+'</td>'
+    +'<td class="amount">'+(r._couponAmt>0?r._couponAmt.toLocaleString():'—')+'</td>'
+    +'</tr>'
+  ).join('');
+}
+
+function filterCoupon(){
+  const q=document.getElementById('srch').value.toLowerCase();
+  const team=document.getElementById('fTeam').value;
+  const st=document.getElementById('fSt').value;
+  filtCoupon=couponRows.filter(r=>{
+    if(q&&!((r._editName||r['고객명'])+(r._realYuchi||r['유치자'])).toLowerCase().includes(q))return false;
+    if(team&&r['협력점']!==team)return false;
+    const ok=!r._isDup&&r._c1&&r._c2&&r._c3;
+    if(st==='new_ok'&&!ok)return false;
+    if(st==='miss'&&!((!r._isDup)&&!(r._c1&&r._c2&&r._c3)))return false;
+    if(st==='dup'&&!r._isDup)return false;
+    if(st==='cno_err'&&!(r._tvErr||!r._tv||r._inetEmpty||r._inetErr))return false;
+    return true;
+  });
+  renderCoupon();
+}
+
+function renderCoupon(){
+  document.getElementById('filtN').textContent=filtCoupon.length+'건';
+  // 100건 이상이면 스크롤, 미만이면 자연 높이
+  const ts=document.querySelector('#tCoupon .ts');
+  if(ts){
+    if(filtCoupon.length>=100){ts.style.maxHeight='520px';ts.style.overflowY='auto';}
+    else{ts.style.maxHeight='';ts.style.overflowY='';}
+  }
+  const tbody=document.getElementById('couponBody');
+  if(!filtCoupon.length){
+    tbody.innerHTML='<tr><td colspan="13"><div class="empty"><div class="ei">🔍</div><p>항목 없음</p></div></td></tr>';return;
+  }
+  tbody.innerHTML=filtCoupon.map((r,i)=>{
+    let trCls='',badge='';
+    if(r._isDup){trCls='r-dup';badge='<span class="mc mc-dup">등록완료</span>';}
+    else if(r._c1&&r._c2&&r._c3){
+      trCls='r-ok';
+      badge='<span class="mc mc-ok">✓완성</span>';
+      if(r._tvErr||!r._tv) badge+='<span class="mc mc-cno">TV계약번호오류</span>';
+      if(r._inetEmpty) badge+='<span class="mc mc-cno">인터넷계약번호없음</span>';
+      else if(r._inetErr) badge+='<span class="mc mc-cno">인터넷계약번호오류</span>';
+    }
+    else{trCls='r-miss';if(!r._c1)badge+='<span class="mc mc-n">이름</span>';if(!r._c2)badge+='<span class="mc mc-s">사은품</span>';if(!r._c3)badge+='<span class="mc mc-a">금액</span>';
+      if(r._tvErr||!r._tv) badge+='<span class="mc mc-cno">TV계약번호오류</span>';
+      if(r._inetEmpty) badge+='<span class="mc mc-cno">인터넷계약번호없음</span>';
+      else if(r._inetErr) badge+='<span class="mc mc-cno">인터넷계약번호오류</span>';
+    }
+    let yuchiDisp=r._realYuchi||r['유치자'];
+    if(r._realYuchi&&r._realYuchi!==(r['유치자']))yuchiDisp='<span style="color:var(--txt3);font-size:10px">'+r['유치자']+'</span>→<b style="color:var(--ac)">'+r._realYuchi+'</b>';
+    const tvRate=getTvRate(r);
+    const rateStr=tvRate.monthly>0?tvRate.monthly.toLocaleString()+'×'+tvRate.months:'—';
+    return '<tr class="'+trCls+'">'
+      +'<td><input type="checkbox" class="rc" value="'+i+'" onchange="onSel()"></td>'
+      +'<td>'+( r['No']||'')+'</td>'
+      +'<td class="ec" onclick="openEdit('+i+')">'+(r._editName||r['고객명'])+'</td>'
+      +'<td>'+(r['상품옵션']||'')+'</td>'
+      +'<td style="font-family:monospace;font-size:10px">'
+      +(r._inetEmpty?'<span class="mc mc-cno">⚠비어있음</span>'
+        :r._inetErr?'<span class="mc mc-cno">⚠'+r._inet+'</span>'
+        :'<span style="color:var(--txt2)">'+r._inet+'</span>')
+      +'</td>'
+      +'<td style="font-family:monospace;font-size:10px">'
+      +(r._tvErr||!r._tv?'<span class="mc mc-cno">⚠'+(r._tv||'비어있음')+'</span>'
+        :'<span style="color:var(--txt2)">'+r._tv+'</span>')
+      +'</td>'
+      +'<td>'+(r['개통일']||'')+'</td>'
+      +'<td><span class="badge b-gray" style="font-size:10px">'+(r['협력점']||'')+'</span></td>'
+      +'<td style="font-size:11px">'+yuchiDisp+'</td>'
+      +'<td class="ec" onclick="openEdit('+i+')" style="max-width:140px;overflow:hidden;text-overflow:ellipsis" title="'+(r._editSp||r['사은품']||'')+'">'+(r._editSp||r['사은품']||'')+'</td>'
+      +'<td class="ec amount" onclick="openEdit('+i+')">'+(r._couponAmt>0?r._couponAmt.toLocaleString():'—')+'</td>'
+      +'<td style="font-size:11px;color:var(--txt2)">'+rateStr+'</td>'
+      +'<td>'
+      +'<div style="display:flex;align-items:center;gap:4px;flex-wrap:nowrap">'
+      +'<input type="checkbox" class="inet-chk" data-uid="'+(r._uid||i)+'" '+(r._inetCoupon?'checked':'')+' onchange="onInetChk(this)" style="width:13px;height:13px;accent-color:var(--ac);flex-shrink:0">'
+      +'<input type="number" class="inet-amt" data-uid="'+(r._uid||i)+'" value="'+(r._inetAmt||'')+'" placeholder="금액" '+(r._inetCoupon?'':"disabled")+' style="width:65px;padding:3px 5px;background:var(--sf2);border:1px solid var(--bd);border-radius:4px;color:var(--txt);font-size:11px;outline:none">'
+      +'<input type="number" class="inet-mon" data-uid="'+(r._uid||i)+'" value="'+(r._inetMonths||'')+'" placeholder="개월" '+(r._inetCoupon?'':"disabled")+' style="width:48px;padding:3px 5px;background:var(--sf2);border:1px solid var(--bd);border-radius:4px;color:var(--txt);font-size:11px;outline:none">'
+      +'</div>'
+      +'</td>'
+      +'<td>'+badge+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+function filterDaou(){
+  const q=document.getElementById('daouSrch').value.toLowerCase();
+  filtDaou=daouRows.filter(r=>!q||String(r['고객명']).toLowerCase().includes(q));
+  renderDaou();
+}
+function renderDaou(){
+  document.getElementById('daouN').textContent=filtDaou.length+'건';
+  const tbody=document.getElementById('daouBody');
+  if(!filtDaou.length){tbody.innerHTML='<tr><td colspan="24"><div class="empty"><div class="ei">📭</div><p>신규 완성 데이터 없음</p></div></td></tr>';return;}
+  tbody.innerHTML=filtDaou.map(r=>'<tr>'
+    +'<td><span class="badge b-green">'+r['상태']+'</span></td>'
+    +'<td><span class="badge b-blue">'+r['구분']+'</span></td>'
+    +'<td style="font-size:10px;color:var(--txt2);max-width:130px;overflow:hidden;text-overflow:ellipsis">'+r['유치자(유발자)']+'</td>'
+    +'<td><span class="badge b-gray" style="font-size:10px">'+r['유치부서(유발부서)']+'</span></td>'
+    +'<td>'+r['고객명']+'</td>'
+    +'<td>'+r['개통일자']+'</td>'
+    +'<td style="font-family:monospace;font-size:10px">'+r['인터넷 서비스계약번호']+'</td>'
+    +'<td style="font-family:monospace;font-size:10px">'+r['TV 서비스계약번호']+'</td>'
+    +'<td>'+r['기존 인터넷 상품']+'</td>'
+    +'<td>'+r['변경 인터넷 상품']+'</td>'
+    +'<td class="amount">'+(r['(월)인터넷 지원 요금']||0).toLocaleString()+'</td>'
+    +'<td>'+(r['(총)인터넷 지원 개월수']||0)+'</td>'
+    +'<td class="amount">'+(r['(총)인터넷 지원 요금']||0).toLocaleString()+'</td>'
+    +'<td>'+r['기존 TV 상품']+'</td>'
+    +'<td>'+r['변경된 TV 상품']+'</td>'
+    +'<td class="amount">'+(r['(월)TV 지원 요금']||0).toLocaleString()+'</td>'
+    +'<td>'+(r['(총)TV 지원 개월수']||0)+'</td>'
+    +'<td class="amount">'+(r['(총)TV 지원 요금']||0).toLocaleString()+'</td>'
+    +'<td>0</td><td>0</td><td>0</td>'
+    +'<td class="amount" style="color:var(--yellow)">'+(r['총 합계(업셀링)']||0).toLocaleString()+'</td>'
+    +'<td style="font-size:10px;color:var(--txt2)">'+( r['쿠폰 등록자 (KOS ID 기준)']||'')+'</td>'
+    +'<td>'+r['쿠폰 전산 등록일']+'</td>'
+    +'</tr>'
+  ).join('');
+}
+
+function renderTv(){
+  document.getElementById('tvN').textContent=tvRows.length+'건';
+  document.getElementById('tvBody').innerHTML=tvRows.map((r,i)=>'<tr>'
+    +'<td>'+(i+1)+'</td>'
+    +'<td style="font-family:monospace">'+r['서비스계약번호']+'</td>'
+    +'<td class="amount">'+r['요금할인금액'].toLocaleString()+'</td>'
+    +'<td></td><td></td>'
+    +'<td style="font-family:monospace">'+r['할인시작 월']+'</td>'
+    +'<td>'+r['개월 수']+'</td>'
+    +'</tr>'
+  ).join('');
+}
+
+function renderInet(){
+  document.getElementById('inetN').textContent=inetRows.length+'건';
+  document.getElementById('inetBody').innerHTML=inetRows.length
+    ?inetRows.map((r,i)=>'<tr>'
+      +'<td>'+(i+1)+'</td>'
+      +'<td style="font-family:monospace">'+r['서비스계약번호']+'</td>'
+      +'<td></td><td></td>'
+      +'<td style="font-family:monospace">'+r['할인시작 월']+'</td>'
+      +'<td>'+r['개월 수']+'</td>'
+      +'</tr>'
+    ).join('')
+    :'<tr><td colspan="6"><div class="empty" style="padding:30px"><p>인터넷 쿠폰 등록 필요 건 없음</p></div></td></tr>';
+}
+
+// ════════════════════════════════════════
+// Edit
+// ════════════════════════════════════════
+// 인터넷 쿠폰 체크/금액 처리
+function findByUid(uid){return couponRows.find(r=>(r._uid||'')===String(uid));}
+function onInetChk(cb){
+  const r=findByUid(cb.dataset.uid);
+  if(!r)return;
+  r._inetCoupon=cb.checked;
+  const wrap=cb.parentElement;
+  const amtInput=wrap.querySelector('.inet-amt');
+  const monInput=wrap.querySelector('.inet-mon');
+  if(amtInput){amtInput.disabled=!cb.checked;if(!cb.checked){amtInput.value='';r._inetAmt=0;}}
+  if(monInput){monInput.disabled=!cb.checked;if(!cb.checked){monInput.value='';r._inetMonths=0;}}
+}
+function onInetAmt(input){
+  const r=findByUid(input.dataset.uid);
+  if(!r)return;
+  r._inetAmt=parseFloat(input.value)||0;
+}
+function deleteSelected(){
+  const checked=[...document.querySelectorAll('.rc:checked')];
+  if(!checked.length){showToast('삭제할 항목을 선택하세요','err');return;}
+  // 민원및추가지급 쿠폰 조건 있는 것은 삭제 불가
+  const uids=checked.map(c=>c.value);
+  let blocked=0, deleted=0;
+  uids.forEach(uid=>{
+    // uid로 먼저 찾고, 없으면 filtCoupon 인덱스로 찾기
+    let r=couponRows.find(row=>(row._uid||'')===String(uid));
+    if(!r){const i=parseInt(uid);if(!isNaN(i)&&filtCoupon[i])r=filtCoupon[i];}
+    if(!r)return;
+    const prod=r['상품명']||'';
+    // 민원및추가지급 + 쿠폰조건 있으면 삭제 불가
+    if(prod.includes('추가지급')&&(r._c1||r._c2||r._c3)){blocked++;return;}
+    // couponRows에서도 제거
+    const ci=couponRows.indexOf(r);
+    if(ci>=0)couponRows.splice(ci,1);
+    deleted++;
+  });
+  if(blocked>0) showToast(`⚠ ${blocked}건은 삭제 불가 (민원및추가지급 쿠폰 대상)`, 'err');
+  // 필터 재적용
+  filterCoupon();
+  const complete=couponRows.filter(r=>!r._isDup&&r._c1&&r._c2&&r._c3);
+  daouRows=buildDaouRows(complete);tvRows=buildTvRows(complete);inetRows=buildInetRows();
+  filtDaou=[...daouRows];
+  updateStats();renderDaou();renderTv();renderInet();
+  deselect();
+  if(deleted>0) showToast(`🗑 ${deleted}건 삭제 완료`+(blocked>0?` (${blocked}건 보호)`:''),'ok');
+}
+
+function applyInetInputs(){
+  // 테이블에서 현재 입력값 전부 수집 후 반영
+  document.querySelectorAll('.inet-chk').forEach(cb=>{
+    const uid=cb.dataset.uid;
+    const r=findByUid(uid);
+    if(!r)return;
+    r._inetCoupon=cb.checked;
+    const wrap=cb.parentElement;
+    const amtInput=wrap.querySelector('.inet-amt');
+    const monInput=wrap.querySelector('.inet-mon');
+    r._inetAmt=amtInput?parseFloat(amtInput.value)||0:r._inetAmt;
+    r._inetMonths=monInput?parseInt(monInput.value)||0:r._inetMonths;
+  });
+  rebuildOutputs();
+  showToast('✅ 적용 완료 - 다우업로드/전산_인터넷 업데이트','ok');
+}
+function rebuildOutputs(){
+  const complete=couponRows.filter(r=>!r._isDup&&r._c1&&r._c2&&r._c3);
+  daouRows=buildDaouRows(complete);tvRows=buildTvRows(complete);inetRows=buildInetRows();
+  filtDaou=[...daouRows];
+  renderDaou();renderTv();renderInet();
+  document.getElementById('daouN').textContent=filtDaou.length+'건';
+}
+
+let editIdx=-1;
+function openEdit(i){
+  editIdx=i;const r=filtCoupon[i];
+  document.getElementById('edt_name').value=r._editName||r['고객명'];
+  document.getElementById('edt_sp').value=r._editSp||r['사은품'];
+  document.getElementById('edt_amt').value=parseFloat(r._editAmt)||r._couponAmt||0;
+  document.getElementById('editNote').textContent='현재: 이름쿠폰 '+(r._c1?'✓':'✗')+' · 선납권 '+(r._c2?'✓':'✗')+' · 금액 '+(r._c3?'✓':'✗')+(r._isDup?' · 이미등록':'');
+  document.getElementById('editModal').classList.add('open');
+}
+function closeModal(){document.getElementById('editModal').classList.remove('open');editIdx=-1;}
+function saveEdit(){
+  if(editIdx<0)return;
+  const r=filtCoupon[editIdx];
+  r._editName=document.getElementById('edt_name').value.trim();
+  r._editSp=document.getElementById('edt_sp').value.trim();
+  r._editAmt=parseFloat(document.getElementById('edt_amt').value)||0;
+  r._c1=r._editName.includes('쿠폰');r._c2=r._editSp.includes('선납권');r._c3=r._editAmt>0;r._couponAmt=r._editAmt;
+  closeModal();
+  const complete=couponRows.filter(r=>!r._isDup&&r._c1&&r._c2&&r._c3);
+  daouRows=buildDaouRows(complete);tvRows=buildTvRows(complete);inetRows=buildInetRows();
+  filtDaou=[...daouRows];updateStats();renderAll();
+  showToast('✅ 수정 완료','ok');
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+// 배경 클릭으로 모달 닫기 비활성화 - 저장/취소 버튼으로만 닫기
+
+// ════════════════════════════════════════
+// Selection
+// ════════════════════════════════════════
+function onSel(){const n=document.querySelectorAll('.rc:checked').length;document.getElementById('selN').textContent=n;document.getElementById('selBar').style.display=n>0?'flex':'none';}
+function toggleAll(cb){document.querySelectorAll('.rc').forEach(c=>c.checked=cb.checked);onSel();}
+function deselect(){document.querySelectorAll('.rc,#chkAll').forEach(c=>c.checked=false);onSel();}
+
+// ════════════════════════════════════════
+// Export
+// ════════════════════════════════════════
+const DH=['상태','구분','유치자(유발자)','유치부서(유발부서)','고객명','개통일자',
+  '인터넷 서비스계약번호','TV 서비스계약번호','기존 인터넷 상품','변경 인터넷 상품',
+  '(월)인터넷 지원 요금','(총)인터넷 지원 개월수','(총)인터넷 지원 요금',
+  '기존 TV 상품','변경된 TV 상품','(월)TV 지원 요금','(총)TV 지원 개월수','(총)TV 지원 요금',
+  '(월)STB 지원요금','(총)STB 지원 개월수','(총)STB 지원 요금','총 합계(업셀링)',
+  '쿠폰 등록자 (KOS ID 기준)','쿠폰 전산 등록일'];
+
+function exportAllDaouCSV(){
+  if(!daouRows.length){showToast('신규 완성 데이터 없음','err');return;}
+  downloadCsv([DH,...daouRows.map(r=>DH.map(h=>r[h]??''))],todayFmt()+'_쿠폰_다우업로드용.csv');
+  showToast('✅ 다우업로드 CSV '+daouRows.length+'건','ok');
+}
+
+function exportAllTvXlsx(){
+  if(!tvRows.length){showToast('전산_TV 데이터 없음','err');return;}
+  const wb=XLSX.utils.book_new();
+  const hdr=['NO','서비스계약번호','요금할인금액','STB요금할인금액','가전구독요금할인금액','할인시작 월','개월 수'];
+  // 헤더 1행만
+  const data=[hdr,...tvRows.map((r,i)=>[i+1,r['서비스계약번호'],r['요금할인금액'],'','',r['할인시작 월'],r['개월 수']])];
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[{wch:6},{wch:16},{wch:14},{wch:14},{wch:16},{wch:12},{wch:8}];
+  XLSX.utils.book_append_sheet(wb,ws,'전산용 TV쿠폰양식');
+  XLSX.writeFile(wb,todayFmt()+'_전산용_TV쿠폰양식.xlsx');
+  showToast('✅ 전산_TV '+tvRows.length+'건','ok');
+}
+
+function exportAllInetXlsx(){
+  const wb=XLSX.utils.book_new();
+  const hdr=['NO','서비스계약번호','쿠폰권종','가전구독 쿠폰','할인시작 월','개월 수'];
+  // 헤더 1행만
+  const data=[hdr,...inetRows.map((r,i)=>[i+1,r['서비스계약번호'],r['쿠폰권종']||'',r['가전구독 쿠폰']||'',r['할인시작 월'],r['개월 수']])];
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[{wch:6},{wch:16},{wch:10},{wch:12},{wch:12},{wch:8}];
+  XLSX.utils.book_append_sheet(wb,ws,'전산용 인터넷쿠폰양식');
+  XLSX.writeFile(wb,todayFmt()+'_전산용_인터넷쿠폰양식.xlsx');
+  showToast('✅ 전산_인터넷 '+inetRows.length+'건','ok');
+}
+
+function exportAll3(){
+  if(!daouRows.length&&!tvRows.length){showToast('신규 완성 데이터 없음','err');return;}
+  exportAllDaouCSV();
+  setTimeout(exportAllTvXlsx,300);
+  setTimeout(exportAllInetXlsx,600);
+}
+
+// ════════════════════════════════════════
+// Util
+// ════════════════════════════════════════
+function switchTab(name,btn){
+  const map={coupon:'tCoupon',daou:'tDaou',tv:'tTv',inet:'tInet',dup:'tDup'};
+  Object.values(map).forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById(map[name]).style.display='block';
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');
+}
+function parseAmt(v){if(!v)return 0;const n=parseFloat(String(v).replace(/,/g,''));return isNaN(n)?0:n;}
+function todayStr(){return new Date().toISOString().slice(0,10).replace(/-/g,'');}
+function downloadCsv(data,filename){
+  const bom='\uFEFF';
+  const csv=bom+data.map(row=>row.map(c=>{const s=String(c??'');return(s.includes(',')||s.includes('"')||s.includes('\n'))?'"'+s.replace(/"/g,'""')+'"':s;}).join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));a.download=filename;a.click();
+}
+let toastT;
+function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');clearTimeout(toastT);toastT=setTimeout(()=>t.className='',3500);}
+
+// Init
+renderCfg();
+</script>
+</body>
+</html>
